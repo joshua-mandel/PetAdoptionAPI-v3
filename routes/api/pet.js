@@ -2,7 +2,8 @@ const debug = require('debug')('app:routes:api:pet');
 const debugError = require('debug')('app:error');
 const express = require('express');
 const { nanoid } = require('nanoid');
-
+const dbModule = require('../../database');
+const { newId } = require('../../database');
 
 
 const petsArray = [
@@ -15,47 +16,65 @@ const petsArray = [
 const router = express.Router();
 
 //define routes
-router.get('/api/pet/list', (req, res, next) => {
-  res.json(petsArray);
-});
-
-router.get('/api/pet/:petId', (req, res, next) => {
-  const petId = req.params.petId;
-
-  const foundPet = petsArray.find((x) => x._id == petId);
-  if (!foundPet) {
-    res.status(404).json({ error: 'Pet Not Found' });
-  } else {
-    res.json(foundPet);
+router.get('/api/pet/list', async (req, res, next) => {
+  try{
+    const pets = await dbModule.findAllPets();
+    res.json(pets);
+  } catch (err) {
+    next(err);
   }
 });
-//create
-router.put('/api/pet/new', (req, res, next) => {
-  const petId = nanoid();
-  const { species, name, gender } = req.body;
-  const age = parseInt(req.body.age);
+
+router.get('/api/pet/:petId', async (req, res, next) => {
+  try{
+    const petId = newId(req.params.petId);
+    const pet = await dbModule.findPetById(petId);
+    if(!pet) {
+      res.status(404).json({ error: `${petId} not found!`})
+    } else {
+      res.json(pet);
+    }
+  } catch (err) {
+    next(err);
+  }
   
-  const pet = {
-    _id: petId,
-    species, //species:species,
-    name,
-    age,
-    gender,
-    createdDate:new Date(),
-  };
+  // const petId = req.params.petId;
+  // const foundPet = petsArray.find((x) => x._id == petId);
+  // if (!foundPet) {
+  //   res.status(404).json({ error: 'Pet Not Found' });
+  // } else {
+  //   res.json(foundPet);
+  // }
+});
+//create
+router.put('/api/pet/new', async (req, res, next) => {
+  try {
+    const pet = {
+      _id: newId(),
+      species: req.body.species,
+      name: req.body.name,
+      age: parseInt(req.body.age),
+      gender: req.body.gender,
+      createdDate: new Date(),
+    };
 
   //validation
-  if (!species) {
+  if (!pet.species) {
     res.status(400).json({ error: 'Species required' });
-  } else if (!name) {
+  } else if (!pet.name) {
     res.status(400).json({ error: 'Name required' });
-  } else if (!gender) {
+  } else if (!pet.gender) {
     res.status(400).json({ error: 'Gender required' });
-  } else if (!age) {
+  } else if (!pet.age) {
     res.status(400).json({ error: 'Age required' });
   } else {
-    petsArray.push(pet);
-    res.json(pet);
+    await dbModule.insertOnePet(pet);
+    res.json({ message: 'pet created!' });
+    // petsArray.push(pet);
+    // res.json(pet);
+  }
+}catch (err) {
+  next(err);
   }
 });
 //update
