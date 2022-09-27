@@ -20,7 +20,7 @@ app.use((err,req,res,next) => {
 });
 
 //start listening for requests
-const port = process.env.PORT || 5001;
+const port = process.env.PORT || 5002;
 app.listen(port, () => {
   debug(`Server running at http://localhost:${port}`);
 });
