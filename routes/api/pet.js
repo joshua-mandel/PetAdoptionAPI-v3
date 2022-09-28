@@ -5,12 +5,6 @@ const { nanoid } = require('nanoid');
 const dbModule = require('../../database');
 const { newId } = require('../../database');
 
-const petsArray = [
-  { _id: '1', name: 'Fido', createdDate: new Date() },
-  { _id: '2', name: 'Watson', createdDate: new Date() },
-  { _id: '3', name: 'Loki', createdDate: new Date() },
-];
-
 //create a router
 const router = express.Router();
 

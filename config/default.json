@@ -4,7 +4,7 @@
     "port": 5002
   },
   "db": {
-    "url": "mongodb+srv://admin:Jm21jm06jm54@cluster0.etnmhcv.mongodb.net/?retryWrites=true&w=majority",
-    "name": "pet-adoption"
+    "url": "DB_URL",
+    "name": "DB_NAME"
   }
 }
