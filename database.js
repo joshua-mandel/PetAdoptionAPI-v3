@@ -35,7 +35,7 @@ async function findAllPets() {
 
 async function findPetById(petId) {
   const db = await connect();
-  const pet = await db.collection('pets').findOne({ _id: { $eq: petId } })
+  const pet = await db.collection('pets').findOne({ _id: { $eq: petId } });
   return pet;
 }
 
@@ -50,7 +50,7 @@ async function insertOnePet(pet) {
 async function updateOnePet(petId, update) {
   const db = await connect();
   await db.collection('pets').updateOne(
-    {_id: { $eq: petId }},
+    { _id: { $eq: petId } },
     {
       $set: {
         ...update,
@@ -60,7 +60,7 @@ async function updateOnePet(petId, update) {
   );
 }
 
-async function deleteOnePet(petId, update) {
+async function deleteOnePet(petId) {
   const db = await connect();
   await db.collection('pets').deleteOne({ _id: { $eq: petId } });
 }

@@ -84,8 +84,8 @@ router.put('/api/pet/:petId', async (req, res, next) => {
     debug(`update pet ${petId}`, update);
 
     const pet = await dbModule.findPetById(petId);
-    if(!pet) {
-      res.status(404).json({ error: `Pet ${petId} not found`});
+    if (!pet) {
+      res.status(404).json({ error: `Pet ${petId} not found` });
     } else {
       await dbModule.updateOnePet(petId, update);
       res.json({ message: `Pet ${petId} update.` });
@@ -115,14 +115,20 @@ router.put('/api/pet/:petId', async (req, res, next) => {
 });
 
 //delete
-router.delete('/api/pet/:petId', (req, res, next) => {
-  const petId = req.params.petId;
-  const index = petsArray.findIndex((x) => x._id == petId);
-  if (index < 0) {
-    res.status(404).json({ error: 'Pet Not Found' });
-  } else {
-    petsArray.splice(index, 1);
-    res.json({ message: 'Pet deleted' });
+router.delete('/api/pet/:petId', async (req, res, next) => {
+  try {
+    const petId = newId(req.params.petId);
+    debug(`delete pet ${petId}`);
+    const pet = await dbModule.findPetById(petId);
+
+    if (!pet) {
+      res.status(404).json({ error: `Pet ${petId} not found` });
+    } else {
+      await dbModule.deleteOnePet(petId);
+      res.json({ message: `Pet ${petId} deleted.` });
+    }
+  } catch (err) {
+    next(err);
   }
 });
 
