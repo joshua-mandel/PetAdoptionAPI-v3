@@ -1,7 +1,7 @@
 {
   "http": {
     "host": "localhost",
-    "port": 5002
+    "port": 5005
   },
   "db": {
     "url": "DB_URL",

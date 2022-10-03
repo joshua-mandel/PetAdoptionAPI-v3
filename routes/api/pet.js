@@ -4,11 +4,14 @@ const express = require('express');
 const { nanoid } = require('nanoid');
 const dbModule = require('../../database');
 const { newId } = require('../../database');
+const Joi = require('joi');
 
 //create a router
 const router = express.Router();
 
 //define routes
+
+// find all
 router.get('/api/pet/list', async (req, res, next) => {
   try {
     const pets = await dbModule.findAllPets();
@@ -42,6 +45,17 @@ router.get('/api/pet/:petId', async (req, res, next) => {
 //create
 router.put('/api/pet/new', async (req, res, next) => {
   try {
+const schema = Joi.object({
+  species: Joi.string().trim().min(1).pattern(/^[^0-9]+$/).required(),
+  name: Joi.string().trim().min(1).required(),
+  age: Joi.number().integer().min(0).max(1000).required(),
+  gender:Joi.string().trim().length(1).required(),
+});
+const validateResult = schema.validate(req.body, { abortEarly: false });
+if(validateResult.error) {
+  return res.status(400).json({ error: validateResult.error });
+}
+
     const pet = {
       _id: newId(),
       species: req.body.species,
@@ -49,22 +63,9 @@ router.put('/api/pet/new', async (req, res, next) => {
       age: parseInt(req.body.age),
       gender: req.body.gender,
     };
-
-    //validation
-    if (!pet.species) {
-      res.status(400).json({ error: 'Species required' });
-    } else if (!pet.name) {
-      res.status(400).json({ error: 'Name required' });
-    } else if (!pet.gender) {
-      res.status(400).json({ error: 'Gender required' });
-    } else if (!pet.age) {
-      res.status(400).json({ error: 'Age required' });
-    } else {
+    
       await dbModule.insertOnePet(pet);
       res.json({ message: 'pet created!' });
-      // petsArray.push(pet);
-      // res.json(pet);
-    }
   } catch (err) {
     next(err);
   }
