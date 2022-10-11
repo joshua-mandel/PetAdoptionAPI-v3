@@ -8,9 +8,6 @@ const Joi = require('joi');
 const validId = require('../../middleware/validId');
 const validBody = require('../../middleware/validBody');
 
-//create a router
-const router = express.Router();
-
 // new pet schema
 const newPetSchema = Joi.object({
   species: Joi.string()
@@ -33,6 +30,11 @@ const updatePetSchema = Joi.object({
   age: Joi.number().integer().min(0).max(1000),
   gender: Joi.string().trim().length(1),
 });
+
+//create a router
+const router = express.Router();
+
+
 
 //define routes
 
