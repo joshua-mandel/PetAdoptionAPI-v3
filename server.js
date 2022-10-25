@@ -5,26 +5,43 @@ const { nanoid } = require('nanoid');
 const config = require('config');
 const dbModules = require('./database');
 
+if (!config.get('db.url')) {
+  throw new Error('db.url not defined!');
+}
+if (!config.get('auth.secret')) {
+  throw new Error('auth.secret not defined!');
+}
+if (!config.get('auth.tokenExpiresIn')) {
+  throw new Error('auth.tokenExpiresIn not defined!');
+}
+if (!config.get('auth.cookieMaxAge')) {
+  throw new Error('auth.cookieMaxAge not defined!');
+}
+if (!config.get('auth.saltRounds')) {
+  throw new Error('auth.saltRounds not defined!');
+}
+
 // define custom objectId validator
 const Joi = require('joi');
 const { ObjectId } = require('mongodb');
 Joi.objectId = () => {
-  return Joi.any().custom((value, helpers) => {
-    try {
-      if (!value) {
+  return Joi.any()
+    .custom((value, helpers) => {
+      try {
+        if (!value) {
+          return helpers.error('any.objectId');
+        } else if (typeof value !== 'string' && typeof value !== 'object') {
+          return helpers.error('any.objectId');
+        } else {
+          return new ObjectId(value);
+        }
+      } catch (err) {
         return helpers.error('any.objectId');
-      } else if (typeof value !== 'string' && typeof value !== 'object') {
-        return helpers.error('any.objectId');
-      } else {
-        return new ObjectId(value);
       }
-    } catch (err) {
-      return helpers.error('any.objectId');
-    }
-  })
-  .rule({
-    message: { 'any.objectId': '{#label} was not a valid ObjectId' }
-  })
+    })
+    .rule({
+      message: { 'any.objectId': '{#label} was not a valid ObjectId' },
+    });
 };
 
 //construct express app
@@ -34,14 +51,15 @@ app.use(express.json());
 
 //define routes
 app.use(require('./routes/api/pet'));
+app.use(require('./routes/api/user'));
 //handle errors
-app.use((req,res,next) =>{
-  res.status(404).json({error:'Page not found!'});
+app.use((req, res, next) => {
+  res.status(404).json({ error: 'Page not found!' });
 });
 
-app.use((err,req,res,next) => {
+app.use((err, req, res, next) => {
   debugError(err);
-  res.status(500).json({error:err.message});
+  res.status(500).json({ error: err.message });
 });
 
 //start listening for requests
