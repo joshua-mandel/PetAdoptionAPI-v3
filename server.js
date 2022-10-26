@@ -48,6 +48,8 @@ Joi.objectId = () => {
 const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+app.use(require('cookie-parser')());
+app.use(require('./middleware/auth')());
 
 //define routes
 app.use(require('./routes/api/pet'));
