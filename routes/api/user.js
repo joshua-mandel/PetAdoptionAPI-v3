@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const config = require('config');
 const validBody = require('../../middleware/validBody');
 const validId = require('../../middleware/validId');
-const { newId, insertUser, updateUser, getUserById, getUserByEmail } = require('../../database');
+const { newId, insertUser, updateUser, getUserById, getUserByEmail, saveEdit } = require('../../database');
 
 const registerSchema = Joi.object({
   email: Joi.string().email().lowercase().required(),
@@ -93,7 +93,7 @@ router.put('/api/user/me', validBody(updateSchema), async (req, res, next) => {
   // self-service update
   try {
     if (!req.auth) {
-      return res.status(400).json({ error: 'You must be logged in!' });
+      return res.status(401).json({ error: 'You must be logged in!' });
     }
 
     const userId = newId(req.auth._id);
@@ -103,9 +103,21 @@ router.put('/api/user/me', validBody(updateSchema), async (req, res, next) => {
       const saltRounds = parseInt(config.get('auth.saltRounds'));
       update.password = await bcrypt.hash(update.password, saltRounds);
     }
-    
+
     const dbResult = await updateUser(userId, update);
     debug('update me result:', dbResult);
+
+    const edit = {
+      timestamp: new Date(),
+      op: 'update',
+      col: 'users',
+      target: { userId },
+      update,
+      auth: req.auth,
+    };
+    await saveEdit(edit);
+    debug('edit saved');
+
     res.json({ message: 'User Updated' });
   } catch (err) {
     next(err);
