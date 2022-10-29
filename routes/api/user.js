@@ -104,6 +104,8 @@ router.put('/api/user/me', validBody(updateSchema), async (req, res, next) => {
       update.password = await bcrypt.hash(update.password, saltRounds);
     }
 
+    debugMain(update.password);
+
     const dbResult = await updateUser(userId, update);
     debug('update me result:', dbResult);
 
