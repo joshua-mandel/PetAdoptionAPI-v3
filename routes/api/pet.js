@@ -1,4 +1,5 @@
 const debug = require('debug')('app:routes:api:pet');
+const { isLoggedIn, hasPermission } = require('@merlin4/express-auth');
 const debugError = require('debug')('app:error');
 const express = require('express');
 const { nanoid } = require('nanoid');
@@ -160,7 +161,7 @@ router.put('/api/pet/:petId', validId('petId'), validBody(updatePetSchema), asyn
 });
 
 //delete
-router.delete('/api/pet/:petId', validId('petId'), async (req, res, next) => {
+router.delete('/api/pet/:petId', hasPermission('canDeletePet'), validId('petId'), async (req, res, next) => {
   try {
     const petId = req.petId;
     debug(`delete pet ${petId}`);

@@ -3,6 +3,7 @@ const debugError = require('debug')('app:error');
 const express = require('express');
 const { nanoid } = require('nanoid');
 const config = require('config');
+const { authMiddleware } = require('@merlin4/express-auth');
 const dbModules = require('./database');
 
 if (!config.get('db.url')) {
@@ -50,6 +51,12 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(require('cookie-parser')());
 app.use(require('./middleware/auth')());
+app.use(
+  authMiddleware('my super secret key', 'authToken', {
+    httpOnly: true,
+    maxAge: 1000 * 60 * 15,
+  })
+);
 
 //define routes
 app.use(require('./routes/api/pet'));

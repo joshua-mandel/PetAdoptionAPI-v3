@@ -24,6 +24,52 @@ const updateSchema = Joi.object({
   fullName: Joi.string().trim().min(1),
 });
 
+async function issueAuthToken(user) {
+  const authPayload = {
+    _id: user._id,
+    email: user.email,
+    fullName: user.fullName,
+    role: user.role,
+  };
+
+  // get role names
+  const roleNames = Array.isArray(user.role) ? user.role : [user.role];
+
+  // get all of the roles in parallel
+  const roles = await Promise.all(
+    roleNames.map((roleName) => findRoleByName(roleName))
+  );
+
+  // combine the permission tables
+  const permissions = {};
+  for (const role of roles) {
+    if (role && role.permissions) {
+      for (const permission in role.permissions) {
+        if (role.permissions[permission] === true) {
+          permissions[permission] = true;
+        }
+      }
+    }
+  }
+
+  // update the token payload
+  authPayload.permissions = permissions;
+
+  // issue token
+  const authSecret = config.get('auth.secret');
+  const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
+  const authToken = jwt.sign(authPayload, authSecret, authOptions);
+  return authToken;
+}
+
+function setAuthCookie(res, authToken) {
+  const cookieOptions = {
+    httpOnly: true,
+    maxAge: parseInt(config.get('auth.cookieMaxAge')),
+  };
+  res.cookie('authToken', authToken, cookieOptions);
+}
+
 const router = new express.Router();
 
 router.post('/api/user/register', validBody(registerSchema), async (req, res, next) => {
@@ -40,21 +86,8 @@ router.post('/api/user/register', validBody(registerSchema), async (req, res, ne
       const dbResult = await insertUser(user);
       debug('register result:', dbResult);
 
-      // issue token
-      const authPayload = {
-        _id: user._id,
-        role: user.role,
-        email: user.email,
-        fullName: user.fullName,
-      };
-
-      const authSecret = config.get('auth.secret');
-      const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
-      const authToken = jwt.sign(authPayload, authSecret, authOptions);
-
-      // create a cookie
-      const cookieOptions = { httpOnly: true, maxAge: parseInt(config.get('auth.cookieMaxAge')) };
-      res.cookie('authToken', authToken, cookieOptions);
+      const authToken = await issueAuthToken(user);
+      setAuthCookie(res, authToken);
 
       res.json({ message: 'New User Registered!', userId: user._id, token: authToken });
     }
@@ -67,21 +100,9 @@ router.post('/api/user/login', validBody(loginSchema), async (req, res, next) =>
     const login = req.body;
     const user = await getUserByEmail(login.email);
     if (user && (await bcrypt.compare(login.password, user.password))) {
-      // issue token
-      const authPayload = {
-        _id: user._id,
-        role: user.role,
-        email: user.email,
-        fullName: user.fullName,
-      };
-
-      const authSecret = config.get('auth.secret');
-      const authOptions = { expiresIn: config.get('auth.tokenExpiresIn') };
-      const authToken = jwt.sign(authPayload, authSecret, authOptions);
-
-      // create a cookie
-      const cookieOptions = { httpOnly: true, maxAge: parseInt(config.get('auth.cookieMaxAge')) };
-      res.cookie('authToken', authToken, cookieOptions);
+      
+      const authToken = await issueAuthToken(user);
+      setAuthCookie(res, authToken);
 
       res.json({ message: 'Welcome back!', userId: user._id, token: authToken });
     } else {
@@ -120,6 +141,9 @@ router.put('/api/user/me', validBody(updateSchema), async (req, res, next) => {
     await saveEdit(edit);
     debug('edit saved');
 
+    const authToken = await issueAuthToken({ ...req.auth, ...update });
+    setAuthCookie(res, authToken);
+
     res.json({ message: 'User Updated' });
   } catch (err) {
     next(err);
@@ -138,6 +162,13 @@ router.put('/api/user/:userId', validId('userId'), validBody(updateSchema), asyn
 
     const dbResult = await updateUser(userId, update);
     debug('update result:', dbResult);
+
+    // issue new token when updating self
+    let authToken;
+    if (userId.equals(req.auth._id)) {
+      authToken = await issueAuthToken({...req.auth,...update});
+      setAuthCookie(res, authToken);
+    }
 
     if (dbResult.matchedCount > 0) {
       res.json({ message: 'User Updated!', userId });
